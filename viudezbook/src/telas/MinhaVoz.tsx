@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { chamarFuncao, supabase, usuarioId } from "../lib/supabase";
+import { supabase, usuarioId } from "../lib/supabase";
 import { Gravador, Resultado, TEXTO_PARA_LER, avaliar } from "../lib/gravador";
 import { fmtTempo } from "../lib/tipos";
-import { limparCacheVozes } from "../lib/motores";
 import { ir } from "../App";
 
 interface Gravacao { nome: string; caminho: string; url?: string }
@@ -17,7 +16,6 @@ export default function MinhaVoz() {
   const [salvas, setSalvas] = useState<Gravacao[]>([]);
   const [msg, setMsg] = useState("");
   const [erro, setErro] = useState("");
-  const [criando, setCriando] = useState(false);
   const gravador = useRef<Gravador | null>(null);
 
   async function listar() {
@@ -86,25 +84,6 @@ export default function MinhaVoz() {
     listar();
   }
 
-  async function criarVoz() {
-    setErro("");
-    setMsg("");
-    setCriando(true);
-    try {
-      const r = await chamarFuncao<{ voz_id: string; nome: string }>("gerar-voz", {
-        acao: "clonar",
-        caminhos: salvas.slice(0, 3).map((s) => s.caminho),
-        autorizo: true,
-      });
-      limparCacheVozes();
-      setMsg(`Pronto! A voz “${r.nome}” foi criada. Ela aparece em Comparar vozes, no ElevenLabs.`);
-    } catch (e) {
-      setErro(e instanceof Error ? e.message : String(e));
-    } finally {
-      setCriando(false);
-    }
-  }
-
   const avisos = resultado ? avaliar(resultado) : [];
 
   return (
@@ -116,7 +95,7 @@ export default function MinhaVoz() {
       </header>
 
       <section className="cartao">
-        <p>Grave você lendo o texto abaixo, de 1 a 2 minutos. Com essa gravação, o app cria uma voz igual à sua para ler os livros.</p>
+        <p>Grave você lendo o texto abaixo, de 1 a 2 minutos. A gravação fica guardada para criar uma voz igual à sua, de graça, na próxima etapa.</p>
         <ul className="dicas pequeno">
           <li>Lugar silencioso, sem TV ou ventilador.</li>
           <li>Celular a uns 20 cm da boca.</li>
@@ -174,11 +153,8 @@ export default function MinhaVoz() {
               {g.url && <audio className="amostra" controls preload="none" src={g.url} />}
             </div>
           ))}
-          <button className="botao" disabled={!autorizo || criando} onClick={criarVoz}>
-            {criando ? "Criando a sua voz…" : "Criar minha voz no ElevenLabs"}
-          </button>
           <p className="fraco pequeno">
-            O ElevenLabs só cria voz a partir do plano Starter (pago; confira o preço no site). No plano grátis, a gravação fica guardada aqui para usar depois.
+            As gravações ficam guardadas na sua conta. Na próxima etapa, elas vão gerar a sua voz de graça (pelo Kaggle) para ler os livros.
           </p>
         </section>
       )}

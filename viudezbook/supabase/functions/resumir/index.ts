@@ -1,26 +1,20 @@
 // resumir: escreve um resumo do livro para ouvir em ~12 minutos.
-// Quem escreve: Gemini (Google, cota grátis) ou Claude (Anthropic, pago por uso).
+// Quem escreve: Gemini (Google), dentro da cota grátis.
 // O resumo vira o capítulo 0 do livro, então usa as mesmas vozes e o mesmo player.
 // Ações: provedores | estimar | gerar
-import Anthropic from "npm:@anthropic-ai/sdk@1.5.0";
 import { clienteDoUsuario, cors, erro, resposta } from "../_shared/servidor.ts";
 import { blocosDoCapitulo } from "../_shared/texto.ts";
 
-type Provedor = "gemini" | "claude";
+type Provedor = "gemini";
 
-const MODELO_CLAUDE = "claude-opus-5-5";
 const MODELO_GEMINI = Deno.env.get("GEMINI_MODEL") ?? "gemini-2.5-flash"; // conferir no site do Google qual modelo é grátis
 const GEMINI_URL = Deno.env.get("GEMINI_URL") ?? "https://generativelanguage.googleapis.com/v1beta";
 
-// Preço do Claude Opus 5.5 por milhão de tokens (tabela da Anthropic; conferir no site se mudar).
-const USD_ENTRADA = 4;
-const USD_SAIDA = 20;
-const TOKENS_SAIDA_ESTIMADOS = 8000; // resumo + raciocínio
 const LIMITE_TOKENS_LIVRO = 800_000; // cabe com folga na janela de 1 milhão
 
 const PALAVRAS_ALVO = 1800; // ~12 minutos em ritmo de leitura falada
 
-const chaves: Record<Provedor, string> = { gemini: "GEMINI_API_KEY", claude: "ANTHROPIC_API_KEY" };
+const chaves: Record<Provedor, string> = { gemini: "GEMINI_API_KEY" };
 const temChave = (p: Provedor) => !!Deno.env.get(chaves[p]);
 
 // Português gasta mais tokens por letra que inglês; estimativa conservadora.
@@ -47,31 +41,6 @@ async function textoDoLivro(db: any, livroId: string) {
   if (!livro) throw new Error("Livro não encontrado.");
   const texto = (caps ?? []).map((c: any) => `${c.titulo ?? ""}\n\n${c.texto}`).join("\n\n");
   return { livro, texto };
-}
-
-async function comClaude(titulo: string, autor: string, texto: string) {
-  const client = new Anthropic(); // lê ANTHROPIC_API_KEY do servidor
-  const msg = await client.beta.messages.create({
-    model: MODELO_CLAUDE,
-    max_tokens: 16000,
-    betas: ["server-side-fallback-2026-07-01"],
-    fallbacks: "default", // se o modelo recusar, o próprio servidor tenta outro modelo
-    output_config: { effort: "medium" },
-    system: SISTEMA,
-    messages: [
-      {
-        role: "user",
-        content: [
-          { type: "text", text: `<livro titulo="${titulo}" autor="${autor}">\n${texto}\n</livro>` },
-          { type: "text", text: `Escreva o resumo para ouvir de "${titulo}".` },
-        ],
-      },
-    ],
-  });
-  if (msg.stop_reason === "refusal") throw new Error("O Claude não quis resumir este livro.");
-  if (msg.stop_reason === "max_tokens") throw new Error("O resumo ficou grande demais. Tente de novo.");
-  const out = msg.content.map((b) => (b.type === "text" ? b.text : "")).join("").trim();
-  return { texto: out, modelo: msg.model };
 }
 
 async function comGemini(titulo: string, autor: string, texto: string) {
@@ -112,9 +81,7 @@ function limparParaVoz(t: string) {
 async function gerar(db: any, usuarioId: string, livroId: string, provedor: Provedor) {
   try {
     const { livro, texto } = await textoDoLivro(db, livroId);
-    const r = provedor === "claude"
-      ? await comClaude(livro.titulo, livro.autor ?? "", texto)
-      : await comGemini(livro.titulo, livro.autor ?? "", texto);
+    const r = await comGemini(livro.titulo, livro.autor ?? "", texto);
     const resumo = limparParaVoz(r.texto);
     const titulo = "Resumo em 12 minutos";
     const { data: cap, error } = await db
@@ -153,11 +120,10 @@ Deno.serve(async (req) => {
 
   try {
     if (c.acao === "provedores") {
-      return resposta({ gemini: temChave("gemini"), claude: temChave("claude"), modelo_gemini: MODELO_GEMINI, modelo_claude: MODELO_CLAUDE });
+      return resposta({ gemini: temChave("gemini"), modelo_gemini: MODELO_GEMINI });
     }
 
-    const provedor = c.provedor;
-    if (provedor !== "gemini" && provedor !== "claude") return erro("Escolha quem escreve o resumo.");
+    const provedor: Provedor = "gemini";
     if (!temChave(provedor)) return erro(`Falta cadastrar a chave ${chaves[provedor]} no Supabase.`);
     if (!c.livro_id) return erro("Faltou o livro.");
 
@@ -166,8 +132,7 @@ Deno.serve(async (req) => {
     if (tokens > LIMITE_TOKENS_LIVRO) return erro("Este livro é grande demais para resumir de uma vez.");
 
     if (c.acao === "estimar") {
-      const usd = provedor === "claude" ? (tokens * USD_ENTRADA + TOKENS_SAIDA_ESTIMADOS * USD_SAIDA) / 1_000_000 : 0;
-      return resposta({ letras: texto.length, tokens, custo_usd: Math.round(usd * 100) / 100, gratis: provedor === "gemini" });
+      return resposta({ letras: texto.length, tokens, custo_usd: 0, gratis: true });
     }
 
     if (c.acao === "gerar") {

@@ -11,19 +11,19 @@ A especificação completa está em [VIUDEZBOOK-SPEC.md](VIUDEZBOOK-SPEC.md).
 - **Limpeza:** tira número de página, cabeçalho, rodapé e hífen de fim de linha, e divide em capítulos.
 - **Descobrir:** pesquisa livros em domínio público no Projeto Gutenberg e adiciona com um toque. Cada livro guarda a fonte, o link, a licença e a data da coleta.
 - **Biblioteca:** abas Todos, Ouvindo, Quero ler, Li e ★ Favoritos. Busca por título, autor e palavra dentro do texto. Nota de 1 a 5 ao marcar "Li". Exportar em arquivo.
-- **Todas as vozes num lugar só**, escolhidas por livro:
+- **Vozes grátis**, escolhidas por livro:
   | Voz | Custo | Onde gera |
   |---|---|---|
   | **Piper** | Grátis e ilimitada | No celular (na 1ª vez baixa a voz; use Wi-Fi) |
-  | **Google** | Cota grátis por mês (confirmar no site) | No servidor |
-  | **Microsoft (Azure)** | Cota grátis por mês (confirmar no site) | No servidor |
-  | **ElevenLabs** | Créditos do seu plano | No servidor |
+  | **ElevenLabs** | Plano grátis (~10 mil letras por mês) | No servidor |
 - **Comparar vozes:** ouça cada voz lendo um trecho do seu livro e toque em **Usar**.
-- **Resumo em ~12 minutos:** o app escreve um resumo do livro para ouvir (cerca de 1.800 palavras). Ele vira o “★ Resumo” no topo dos capítulos: dá para ler, gerar a voz e ouvir. Quem escreve: **Gemini** (Google, cota grátis) ou **Claude** (Anthropic, pago por uso). O custo aparece antes de gerar. Uso pessoal.
-- **Minha voz:** grave você lendo um texto pronto (1 a 2 minutos). O app confere volume e duração, guarda a gravação na sua conta e cria a sua voz no ElevenLabs com um toque. Criar voz exige o plano Starter do ElevenLabs ou acima (pago; confira o preço no site). Só a sua voz, nunca a de outra pessoa.
-- **Custo antes:** nos serviços pagos, a estimativa e o saldo aparecem antes, e só gera depois de **Confirmar e gerar**. O que já foi gerado nunca é gerado de novo, em nenhuma voz.
-- **Leitura ao vivo:** voz do próprio celular, na hora, sem gerar arquivo. Pode parar quando a tela apaga.
-- **Player:** velocidade de 0,5x a 3x sem mudar o tom, ±15 e 30 segundos, capítulo anterior e próximo, botões do fone e da tela bloqueada. Retoma no mesmo segundo, em qualquer aparelho.
+- **Resumo em ~12 minutos:** o Gemini (Google, cota grátis) escreve um resumo para ouvir. Ele vira o “★ Resumo” no topo dos capítulos: dá para ler, gerar a voz e ouvir. Uso pessoal.
+- **Minha voz:** grave você lendo um texto pronto (1 a 2 minutos). A gravação fica guardada para a próxima etapa: criar a sua voz de graça (via Kaggle).
+- **Nunca gera de novo** o que já foi gerado, em nenhuma voz. No ElevenLabs, o app mostra quanto do plano grátis vai usar antes de gerar.
+- **Leitura ao vivo:** voz do próprio celular, na hora. Pode parar quando a tela apaga.
+- **Player:** velocidade de 0,5x a 3x sem mudar o tom, ±15 e 30 segundos, capítulos, botões do fone e da tela bloqueada. Retoma no mesmo segundo, em qualquer aparelho.
+
+**Tudo aqui é grátis e nenhum serviço pede cartão.** Se alguma tela pedir cartão, pare.
 
 ## Peças
 
@@ -45,103 +45,26 @@ viudezbook/
 As tabelas começam com `vb_` para não misturar com os outros apps do projeto `meus-apps`.
 
 ---
+## Passo a passo (só serviços grátis)
 
-## Passo a passo para colocar no ar (uma vez só)
+### Você faz (uma vez só)
+1. **Token do Supabase:** em supabase.com/dashboard/account/tokens → **Generate new token** → em **Select projects** marque **meus-apps** → **Preset: Full access** → **Review access** → **Generate token**. Cole no formulário seguro que o Claude abrir.
+2. **Chave do ElevenLabs (grátis):** elevenlabs.io → **Developers** → **API Keys** → **Create API Key**. No Supabase: **Edge Functions** → **Secrets** → **Add new secret** → `ELEVENLABS_API_KEY`.
+3. **Chave do Gemini (grátis, para o resumo):** aistudio.google.com/apikey → **Create API key**. No Supabase, em **Secrets**: `GEMINI_API_KEY`. (No plano grátis, o Google pode usar o texto enviado para melhorar os produtos dele: preciso confirmar a regra atual no site.)
+4. **Vercel (plano Hobby, grátis):** vercel.com/new → **Continue with GitHub** → em `meus-apps` toque em **Import** → **Root Directory**: `viudezbook` → **Deploy**. As duas variáveis (`VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY`) o Claude te passa prontas para colar em **Environment Variables**.
+5. **No Android:** abra o endereço do app no **Chrome** → **⋮** → **Instalar app**. Depois **Configurações** → **Apps** → **Chrome** → **Bateria** → **Sem restrições** (para tocar com a tela apagada).
 
-### 1. Banco de dados no Supabase
-1. Entre em **supabase.com** e abra o projeto **meus-apps**. Se ele não existir, clique em **New project**, dê o nome `meus-apps` e escolha a região **South America (São Paulo)**.
-2. No menu da esquerda, clique em **SQL Editor** e depois em **New query**.
-3. Abra o arquivo `supabase/migrations/20261122000000_viudezbook_v1.sql`, copie tudo, cole na tela e clique em **Run**.
-4. Deve aparecer **Success. No rows returned**.
+### O Claude faz sozinho (com o token do passo 1)
+- Cria as tabelas, a proteção RLS e as pastas de arquivos no projeto `meus-apps`.
+- Publica as funções de servidor.
+- Configura o login por e-mail com o endereço da Vercel.
+- Testa tudo no seu Supabase de verdade e te diz o que passou.
 
-### 2. Login por e-mail
-1. No Supabase: **Authentication** → **Sign In / Providers** → confira se **Email** está ligado.
-2. Depois que a Vercel der o endereço do app (passo 5), volte em **Authentication** → **URL Configuration**:
-   - Em **Site URL**, coloque o endereço do app (ex.: `https://viudezbook.vercel.app`).
-   - Em **Redirect URLs**, clique em **Add URL** e coloque o mesmo endereço.
-3. Atenção: o e-mail grátis do Supabase manda poucos links por hora. Se aparecer "Muitos pedidos seguidos", espere alguns minutos.
-
-### 3. Chave do ElevenLabs (fica só no Supabase)
-1. Entre em **elevenlabs.io** → **Developers** → **API Keys** → **Create API Key**.
-2. Dê o nome `viudezbook`. Nas permissões, deixe ligado pelo menos **Text to Speech**, **Voices (Read)** e **User (Read)**, que mostra o seu saldo.
-3. Copie a chave. **Não cole em nenhum outro lugar.**
-4. No Supabase: **Edge Functions** → **Secrets** → **Add new secret**.
-   - Name: `ELEVENLABS_API_KEY`
-   - Value: a chave copiada
-   - Clique em **Save**.
-
-### 3b. Google e Microsoft (opcionais, para comparar)
-Sem eles o app funciona com o Piper e o ElevenLabs. Eles aparecem como "falta configurar" até você cadastrar.
-
-**Google**
-1. Entre em **console.cloud.google.com**, crie um projeto (ex.: `viudezbook`) e, se pedir, cadastre o cartão. O Google exige o cartão mesmo dentro da cota grátis: confira os limites e coloque um **alerta de orçamento** em **Faturamento** → **Orçamentos e alertas**.
-2. No menu: **APIs e serviços** → **Biblioteca** → procure **Cloud Text-to-Speech API** → **Ativar**.
-3. **APIs e serviços** → **Credenciais** → **Criar credenciais** → **Chave de API**. Depois clique em **Restringir chave** e escolha só a **Cloud Text-to-Speech API**.
-4. No Supabase, em **Edge Functions** → **Secrets** → **Add new secret**: `GOOGLE_TTS_API_KEY` = a chave.
-
-**Microsoft (Azure)**
-1. Entre em **portal.azure.com** → **Criar um recurso** → procure **Speech** (Fala) → **Criar**.
-2. Em **Tipo de preço**, escolha **Free F0**. Em **Região**, escolha **Brazil South**.
-3. Depois de criado, abra **Chaves e Ponto de Extremidade** e copie a **Chave 1**.
-4. No Supabase, em **Secrets**, crie `AZURE_SPEECH_KEY` = a chave e `AZURE_SPEECH_REGION` = `brazilsouth`.
-
-### 3c. Resumo (opcional): Gemini e/ou Claude
-**Gemini (grátis, com cota)**
-1. Abra **aistudio.google.com/apikey** e entre com a sua conta Google.
-2. Toque em **Create API key** (Criar chave de API) e copie.
-3. No Supabase, em **Edge Functions** → **Secrets**, crie `GEMINI_API_KEY` = a chave.
-Atenção: no plano grátis, o Google pode usar o conteúdo enviado para melhorar os produtos dele (preciso confirmar a regra atual no site). Para livros de domínio público isso não pesa; para PDFs comprados, prefira o Claude.
-
-**Claude (pago, centavos por livro)**
-1. Abra **console.anthropic.com** → **API Keys** → **Create Key** e copie.
-2. Em **Billing**, coloque um pouco de crédito (ex.: US$ 5) e, se quiser, um limite de gasto.
-3. No Supabase, em **Secrets**, crie `ANTHROPIC_API_KEY` = a chave.
-O app mostra quanto vai custar antes de gerar (pela tabela da Anthropic; o valor exato fica no painel dela).
-
-### 4. Publicar as funções de servidor (automático pelo GitHub)
-1. No Supabase, clique na sua foto → **Account preferences** → **Access Tokens** → **Generate new token**. Dê o nome `github-meus-apps` e copie o token.
-2. No Supabase, abra **Project Settings** → **General** e copie o **Project ID**.
-3. No GitHub, abra o repositório **meus-apps** → **Settings** → **Secrets and variables** → **Actions** → **New repository secret**. Crie dois:
-   - `SUPABASE_ACCESS_TOKEN` = o token do item 1
-   - `SUPABASE_PROJECT_REF` = o Project ID do item 2
-4. Com este código já na branch `main`, vá em **Actions** → **Viudezbook - publicar funções no Supabase** → **Run workflow** → **Run workflow**.
-5. Espere ficar verde ✅. A partir daí, toda mudança nas funções é publicada sozinha.
-
-### 5. Colocar o app online na Vercel
-1. Entre em **vercel.com** com a sua conta do GitHub.
-2. Clique em **Add New…** → **Project** → em `meus-apps`, clique em **Import**.
-3. Em **Root Directory**, clique em **Edit** e escolha **viudezbook**. O **Framework Preset** fica **Vite**.
-4. Abra **Environment Variables** e adicione os dois valores que ficam em Supabase → **Project Settings** → **API**:
-   - `VITE_SUPABASE_URL` = o **Project URL**
-   - `VITE_SUPABASE_ANON_KEY` = a chave **anon public** (ou **publishable**). Essa chave é pública e pode ficar no app.
-5. Clique em **Deploy**. No fim aparece o endereço do app. Use esse endereço no passo 2.2.
-
-### 6. Instalar no Android
-1. Abra o endereço do app no **Chrome** do celular.
-2. Toque nos **três pontinhos (⋮)** → **Instalar app** (ou **Adicionar à tela inicial**).
-3. Entre com o seu e-mail e toque no link que chegar.
-
-### 6b. Gravar a sua voz
-1. No app, toque em **☰** → **Gravar minha voz**.
-2. Marque **“Esta é a minha própria voz”** e toque em **● Começar a gravar**. Na 1ª vez, o Chrome pergunta: toque em **Permitir** no microfone.
-3. Leia o texto inteiro no seu tom normal e toque em **■ Parar**. Ouça; se aparecer aviso, grave de novo.
-4. Toque em **Guardar gravação** e depois em **Criar minha voz no ElevenLabs**.
-5. A voz aparece como **“Minha voz”** em **Comparar vozes** → ElevenLabs. Toque em **Usar**.
-
-### 7. Para tocar com a tela apagada (estilo Spotify)
-O áudio gerado (Piper, Google, Microsoft ou ElevenLabs) toca com a tela apagada e aparece na notificação com os botões. Para o Android não cortar o som:
-1. **Configurações** → **Apps** → **Chrome** → **Bateria** → **Sem restrições**. Se o app aparecer na lista como **Viudezbook**, faça o mesmo nele.
-2. A **Leitura ao vivo** (voz do celular na hora) não tem essa garantia: use áudio gerado quando for apagar a tela.
-
----
-
-## Custos (conferir sempre no site de cada serviço)
-
-- **Piper:** grátis e sem limite. Gasta só bateria e espaço: cerca de 30 MB por hora de áudio no Supabase.
-- **Google e Microsoft:** cota grátis por mês. Os valores mudam, então **preciso confirmar no site** de cada um.
-- **ElevenLabs grátis:** a sua conta tem 10.000 créditos por mês, um capítulo médio. No modo "Mais natural", 1 letra gasta 1 crédito. No "Econômico", ½ crédito. O app mostra a estimativa antes de gerar. O plano grátis pode ter regras próprias, como uso de vozes da biblioteca e atribuição: **preciso confirmar no site**.
-- **Supabase grátis:** tem limite de espaço e pode pausar o projeto se ficar uma semana sem uso. Áudio ocupa espaço, então gere por capítulo.
-- **Vercel grátis:** suficiente para uso pessoal.
+## Limites do grátis (conferir no site de cada serviço)
+- **Supabase:** cerca de 1 GB de arquivos; o projeto pode pausar após uma semana sem uso (reativa com um clique). Áudio ocupa espaço: dá para apagar o áudio de um livro já ouvido.
+- **ElevenLabs:** cerca de 10 mil letras por mês (mais ou menos 1 capítulo). Para o resto, use o Piper.
+- **Gemini:** cota diária; se acabar, tente no dia seguinte.
+- **Vercel Hobby:** sobra para uso pessoal.
 
 ## Para quem for mexer no código
 

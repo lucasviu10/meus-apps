@@ -8,7 +8,7 @@ export const VOZES_PIPER = [
   { voz_id: "pt_BR-edresson-low", nome: "Edresson (masculina, mais leve e rápida)" },
 ];
 
-export type Motor = "piper" | "google" | "azure" | "elevenlabs";
+export type Motor = "piper" | "elevenlabs";
 
 export interface OpcaoMotor {
   modelo: string; // o que fica salvo no livro e nos áudios
@@ -20,10 +20,8 @@ export interface OpcaoMotor {
 
 export const MOTORES: OpcaoMotor[] = [
   { modelo: "piper", motor: "piper", nome: "Piper", resumo: "Grátis e ilimitada. Gera no celular.", local: true },
-  { modelo: "google", motor: "google", nome: "Google", resumo: "Bem natural. Cota grátis por mês." },
-  { modelo: "azure", motor: "azure", nome: "Microsoft", resumo: "Bem natural. Cota grátis por mês." },
-  { modelo: "eleven_multilingual_v2", motor: "elevenlabs", nome: "ElevenLabs · mais natural", resumo: "A mais humana. 1 crédito por letra." },
-  { modelo: "eleven_flash_v2_5", motor: "elevenlabs", nome: "ElevenLabs · econômico", resumo: "½ crédito por letra." },
+  { modelo: "eleven_multilingual_v2", motor: "elevenlabs", nome: "ElevenLabs · mais natural", resumo: "A mais humana. Plano grátis: ~10 mil letras por mês." },
+  { modelo: "eleven_flash_v2_5", motor: "elevenlabs", nome: "ElevenLabs · econômico", resumo: "Rende o dobro do plano grátis." },
 ];
 
 export const opcao = (modelo: string) => MOTORES.find((m) => m.modelo === modelo) ?? MOTORES[0];

@@ -78,7 +78,7 @@ export default function Vozes({ livroId }: { livroId: string | null }) {
           <section key={g.motor} className="cartao grupo-voz">
             <div>
               <h3>{g.nome.replace(" · mais natural", "")}</h3>
-              <p className="fraco pequeno">{g.motor === "elevenlabs" ? "A mais humana. Gasta créditos do seu plano." : g.resumo}</p>
+              <p className="fraco pequeno">{g.motor === "elevenlabs" ? "A mais humana. Usa o plano grátis (~10 mil letras por mês)." : g.resumo}</p>
             </div>
             {!ligado && <p className="aviso pequeno">Falta configurar a chave deste serviço (passo a passo no README).</p>}
             {ligado && lista === undefined && <p className="fraco pequeno">Carregando vozes…</p>}

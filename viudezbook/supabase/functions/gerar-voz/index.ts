@@ -1,5 +1,5 @@
 // gerar-voz: a ÚNICA peça que conhece as chaves dos serviços de voz.
-// Motores: ElevenLabs, Google e Microsoft Azure. (O Piper, grátis, roda no celular.)
+// Motor: ElevenLabs no plano grátis. (O Piper, grátis e ilimitado, roda no celular.)
 // Ações:
 //   motores -> quais serviços estão configurados (sem chamar ninguém)
 //   vozes   -> lista as vozes de um serviço
@@ -12,24 +12,17 @@ import { duracaoMp3 } from "../_shared/mp3.ts";
 
 // Os endereços podem ser trocados só para testes automáticos.
 const ELEVEN = Deno.env.get("ELEVENLABS_API_URL") ?? "https://api.elevenlabs.io/v1";
-const GOOGLE = Deno.env.get("GOOGLE_TTS_URL") ?? "https://texttospeech.googleapis.com/v1";
-const AZURE_REGIAO = Deno.env.get("AZURE_SPEECH_REGION") ?? "brazilsouth";
-const AZURE = Deno.env.get("AZURE_TTS_URL") ?? `https://${AZURE_REGIAO}.tts.speech.microsoft.com`;
 
-type Motor = "elevenlabs" | "google" | "azure";
+type Motor = "elevenlabs";
 
 // Custo por letra, pela tabela de cada serviço (conferir no site se mudar).
 const MODELOS: Record<string, { motor: Motor; nome: string; porLetra: number; unidade: string }> = {
   eleven_multilingual_v2: { motor: "elevenlabs", nome: "ElevenLabs · mais natural", porLetra: 1, unidade: "créditos" },
   eleven_flash_v2_5: { motor: "elevenlabs", nome: "ElevenLabs · econômico", porLetra: 0.5, unidade: "créditos" },
-  google: { motor: "google", nome: "Google", porLetra: 1, unidade: "letras da cota grátis do mês" },
-  azure: { motor: "azure", nome: "Microsoft Azure", porLetra: 1, unidade: "letras da cota grátis do mês" },
 };
 
 const CHAVES: Record<Motor, string> = {
   elevenlabs: "ELEVENLABS_API_KEY",
-  google: "GOOGLE_TTS_API_KEY",
-  azure: "AZURE_SPEECH_KEY",
 };
 const chave = (m: Motor) => Deno.env.get(CHAVES[m]) ?? null;
 
@@ -83,7 +76,7 @@ async function saldoEleven() {
 
 // ---------- Lista de vozes ----------
 async function listarVozes(motor: Motor): Promise<VozInfo[]> {
-  if (motor === "elevenlabs") {
+  {
     const r = await eleven("/voices");
     if (!r.ok) throw await falha("ElevenLabs", r);
     const j = await r.json();
@@ -98,47 +91,11 @@ async function listarVozes(motor: Motor): Promise<VozInfo[]> {
       }))
       .sort((a, b) => Number(b.idioma === "pt") - Number(a.idioma === "pt"));
   }
-  if (motor === "google") {
-    const r = await fetch(`${GOOGLE}/voices?languageCode=pt-BR`, { headers: { "X-Goog-Api-Key": chave("google")! } });
-    if (!r.ok) throw await falha("Google", r);
-    const j = await r.json();
-    const ordem = (n: string) => (/Chirp3-HD/.test(n) ? 0 : /Chirp/.test(n) ? 1 : /Neural2/.test(n) ? 2 : /Wavenet/.test(n) ? 3 : 4);
-    return ((j.voices ?? []) as any[])
-      .filter((v) => (v.languageCodes ?? []).includes("pt-BR"))
-      .sort((a, b) => ordem(a.name) - ordem(b.name) || a.name.localeCompare(b.name))
-      .map((v) => ({
-        voz_id: v.name,
-        nome: v.name.replace("pt-BR-", ""),
-        idioma: "pt",
-        genero: v.ssmlGender === "MALE" ? "male" : v.ssmlGender === "FEMALE" ? "female" : null,
-        categoria: v.name.split("-")[2] ?? null,
-        amostra_url: null,
-      }));
-  }
-  const r = await fetch(`${AZURE}/cognitiveservices/voices/list`, {
-    headers: { "Ocp-Apim-Subscription-Key": chave("azure")! },
-  });
-  if (!r.ok) throw await falha("Microsoft", r);
-  const j = (await r.json()) as any[];
-  return j
-    .filter((v) => v.Locale === "pt-BR")
-    .map((v) => ({
-      voz_id: v.ShortName,
-      nome: v.LocalName ?? v.DisplayName,
-      idioma: "pt",
-      genero: v.Gender === "Male" ? "male" : v.Gender === "Female" ? "female" : null,
-      categoria: v.VoiceType ?? null,
-      amostra_url: null,
-    }));
 }
 
 // ---------- Gerar áudio ----------
-const escaparXml = (t: string) =>
-  t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
-
 async function sintetizar(modelo: string, voz: string, texto: string, antes?: string, depois?: string): Promise<Uint8Array> {
-  const m = MODELOS[modelo];
-  if (m.motor === "elevenlabs") {
+  {
     const corpo: Record<string, unknown> = {
       text: texto,
       model_id: modelo,
@@ -155,35 +112,6 @@ async function sintetizar(modelo: string, voz: string, texto: string, antes?: st
     if (!r.ok) throw await falha("ElevenLabs", r);
     return new Uint8Array(await r.arrayBuffer());
   }
-  if (m.motor === "google") {
-    const r = await fetch(`${GOOGLE}/text:synthesize`, {
-      method: "POST",
-      headers: { "X-Goog-Api-Key": chave("google")!, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        input: { text: texto },
-        voice: { languageCode: "pt-BR", name: voz },
-        audioConfig: { audioEncoding: "MP3" },
-      }),
-    });
-    if (!r.ok) throw await falha("Google", r);
-    const j = await r.json();
-    return Uint8Array.from(atob(j.audioContent), (c) => c.charCodeAt(0));
-  }
-  const ssml =
-    `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="pt-BR">` +
-    `<voice name="${escaparXml(voz)}">${escaparXml(texto).replace(/\n\n/g, '<break time="600ms"/>')}</voice></speak>`;
-  const r = await fetch(`${AZURE}/cognitiveservices/v1`, {
-    method: "POST",
-    headers: {
-      "Ocp-Apim-Subscription-Key": chave("azure")!,
-      "Content-Type": "application/ssml+xml",
-      "X-Microsoft-OutputFormat": "audio-24khz-48kbitrate-mono-mp3",
-      "User-Agent": "Viudezbook",
-    },
-    body: ssml,
-  });
-  if (!r.ok) throw await falha("Microsoft", r);
-  return new Uint8Array(await r.arrayBuffer());
 }
 
 function base64(bytes: Uint8Array): string {
@@ -198,7 +126,7 @@ Deno.serve(async (req) => {
   if (cli instanceof Response) return cli;
   const { db, usuarioId } = cli;
 
-  let c: { acao?: string; caminhos?: string[]; autorizo?: boolean; motor?: Motor; capitulo_id?: string; voz_id?: string; modelo?: string; bloco?: number; confirmado?: boolean; texto?: string };
+  let c: { acao?: string; motor?: Motor; capitulo_id?: string; voz_id?: string; modelo?: string; bloco?: number; confirmado?: boolean; texto?: string };
   try {
     c = await req.json();
   } catch {
@@ -220,34 +148,6 @@ Deno.serve(async (req) => {
       return resposta({ vozes: await listarVozes(motor), saldo: motor === "elevenlabs" ? await saldoEleven() : null });
     }
 
-    if (c.acao === "clonar") {
-      // Cria a SUA voz no ElevenLabs a partir das suas gravações (só a sua, com autorização).
-      if (c.autorizo !== true) return erro("Confirme que a voz é sua.");
-      if (!chave("elevenlabs")) return erro("Falta cadastrar a chave ELEVENLABS_API_KEY no Supabase.");
-      const caminhos = (c.caminhos ?? []).slice(0, 3);
-      if (!caminhos.length) return erro("Grave e guarde a sua voz primeiro.");
-      if (caminhos.some((x) => !x.startsWith(`${usuarioId}/minha-voz/`))) return erro("Gravação inválida.", 403);
-      const form = new FormData();
-      form.append("name", "Minha voz");
-      form.append("description", "Voz do dono da conta, gravada no Viudezbook.");
-      form.append("remove_background_noise", "true");
-      form.append("labels", JSON.stringify({ language: "pt", accent: "pt-brazilian" }));
-      for (const x of caminhos) {
-        const { data, error } = await db.storage.from("vb-audios").download(x);
-        if (error || !data) return erro("Não achei a gravação " + x.split("/").pop());
-        form.append("files", new File([await data.arrayBuffer()], x.split("/").pop()!, { type: "audio/mpeg" }));
-      }
-      const r = await fetch(`${ELEVEN}/voices/add`, { method: "POST", headers: { "xi-api-key": chave("elevenlabs")! }, body: form });
-      if (!r.ok) {
-        const e = await falha("ElevenLabs", r);
-        if (/instant_voice_cloning|can_not_use|subscription|upgrade|plan/i.test(e.message)) {
-          return erro("Seu plano do ElevenLabs não permite criar voz. Precisa do plano Starter ou acima (confira o preço no site). Sua gravação continua guardada.");
-        }
-        throw e;
-      }
-      const j = await r.json();
-      return resposta({ voz_id: j.voice_id, nome: "Minha voz" });
-    }
 
     const modelo = c.modelo ?? "eleven_multilingual_v2";
     const m = MODELOS[modelo];
