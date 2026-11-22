@@ -215,7 +215,11 @@ export default function Player({ livroId, modo, capituloId }: { livroId: string;
         if (cap && prog.modo === modo) pos = modo === "elevenlabs" ? Number(prog.segundo) : prog.trecho;
       }
       if (cap && modo === "elevenlabs" && !comAudioRef.current.has(cap.id)) cap = undefined;
-      if (!cap) cap = modo === "elevenlabs" ? lista.find((x) => comAudioRef.current.has(x.id)) : lista[0];
+      if (!cap) {
+        // começa pelo capítulo 1; o resumo (capítulo 0) só se for o único com áudio
+        const ordem = [...lista.filter((x) => x.numero > 0), ...lista.filter((x) => x.numero === 0)];
+        cap = modo === "elevenlabs" ? ordem.find((x) => comAudioRef.current.has(x.id)) : ordem[0];
+      }
       if (!cap) {
         setAviso(modo === "elevenlabs" ? "Nenhum capítulo tem áudio ainda. Gere a voz na tela do livro." : "Este livro ainda não tem texto.");
         return;
@@ -330,7 +334,7 @@ export default function Player({ livroId, modo, capituloId }: { livroId: string;
       >
         {caps.map((c) => (
           <option key={c.id} value={c.id} disabled={modo === "elevenlabs" && !comAudio.has(c.id)}>
-            {c.numero}. {c.titulo}{modo === "elevenlabs" && !comAudio.has(c.id) ? " (sem áudio)" : ""}
+            {c.numero === 0 ? "★ Resumo (~12 min)" : `${c.numero}. ${c.titulo}`}{modo === "elevenlabs" && !comAudio.has(c.id) ? " (sem áudio)" : ""}
           </option>
         ))}
       </select>

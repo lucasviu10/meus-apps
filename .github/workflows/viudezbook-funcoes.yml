@@ -33,3 +33,4 @@ jobs:
       - run: supabase functions deploy preparar-texto --project-ref "$PROJETO"
       - run: supabase functions deploy coletar-livro --project-ref "$PROJETO"
       - run: supabase functions deploy gerar-voz --project-ref "$PROJETO"
+      - run: supabase functions deploy resumir --project-ref "$PROJETO"

@@ -5,6 +5,7 @@ import { assinarGeracao, estadoGeracao, gerarCapitulo, planoLocal } from "../lib
 import { MOTORES, gerarAmostra, motoresDisponiveis, opcao, vozesDoMotor } from "../lib/motores";
 import { ir } from "../App";
 import Capa from "./Capa";
+import ResumoCard from "./ResumoCard";
 
 interface Estimativa {
   blocos_total: number;
@@ -275,6 +276,8 @@ export default function LivroTela({ livroId }: { livroId: string }) {
         )}
       </section>
 
+      {caps.length > 0 && <ResumoCard livroId={livro.id} aoFicarPronto={carregar} />}
+
       {erro && <p className="erro">{erro}</p>}
 
       <section>
@@ -287,7 +290,7 @@ export default function LivroTela({ livroId }: { livroId: string }) {
             return (
               <li key={c.id}>
                 <div className="info">
-                  <strong>{c.numero}. {c.titulo}</strong>
+                  <strong>{c.numero === 0 ? "★ Resumo (~12 min)" : `${c.numero}. ${c.titulo}`}</strong>
                   <span className="fraco pequeno">
                     ~{fmtTempo(duracaoEstimada(c.caracteres))} · {fmtNum(c.caracteres)} letras ·{" "}
                     {g?.gerando ? (
