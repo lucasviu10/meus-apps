@@ -1,0 +1,21 @@
+// Service worker mínimo: deixa o app instalável e abre rápido.
+// Sempre tenta a versão nova primeiro (atualização automática).
+const CACHE = "viudezbook-v1";
+
+self.addEventListener("install", () => self.skipWaiting());
+self.addEventListener("activate", (e) => e.waitUntil(self.clients.claim()));
+
+self.addEventListener("fetch", (e) => {
+  const req = e.request;
+  const url = new URL(req.url);
+  if (req.method !== "GET" || url.origin !== self.location.origin) return;
+  e.respondWith(
+    fetch(req)
+      .then((res) => {
+        const copia = res.clone();
+        caches.open(CACHE).then((c) => c.put(req, copia));
+        return res;
+      })
+      .catch(() => caches.match(req).then((r) => r || caches.match("/")))
+  );
+});

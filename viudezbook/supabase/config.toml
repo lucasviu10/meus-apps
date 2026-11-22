@@ -1,0 +1,11 @@
+# Configuração mínima para o Supabase CLI publicar as funções.
+project_id = "meus-apps"
+
+[functions.preparar-texto]
+verify_jwt = true
+
+[functions.coletar-livro]
+verify_jwt = true
+
+[functions.gerar-voz]
+verify_jwt = true
