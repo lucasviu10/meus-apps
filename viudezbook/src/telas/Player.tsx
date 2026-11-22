@@ -307,7 +307,7 @@ export default function Player({ livroId, modo, capituloId }: { livroId: string;
     <main className="tela player">
       <header className="topo">
         <button className="icone" onClick={() => ir(`livro/${livroId}`)} aria-label="Voltar">←</button>
-        <span className="fraco pequeno">{modo === "celular" ? "Voz do celular (grátis)" : livro?.voz_nome ?? "ElevenLabs"}</span>
+        <span className="fraco pequeno">{modo === "celular" ? "Leitura ao vivo (deixe a tela ligada)" : livro?.voz_nome ?? "Áudio"}</span>
         <span />
       </header>
 

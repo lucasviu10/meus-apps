@@ -7,3 +7,4 @@ supabase/.temp
 supabase/.branches
 public/ocr
 *.tsbuildinfo
+public/piper

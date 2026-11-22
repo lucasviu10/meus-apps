@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { chamarFuncao, supabase } from "../lib/supabase";
 import { CapituloResumo, Livro, NOME_STATUS, Status, Voz, duracaoEstimada, fmtNum, fmtTempo } from "../lib/tipos";
-import { assinarGeracao, estadoGeracao, gerarCapitulo } from "../lib/geracao";
+import { assinarGeracao, estadoGeracao, gerarCapitulo, planoLocal } from "../lib/geracao";
+import { MOTORES, gerarAmostra, motoresDisponiveis, opcao, vozesDoMotor } from "../lib/motores";
 import { ir } from "../App";
 import Capa from "./Capa";
 
@@ -10,23 +11,20 @@ interface Estimativa {
   blocos_prontos: number;
   caracteres_a_gerar: number;
   creditos_estimados: number;
+  unidade: string;
   modelo: string;
+  local?: boolean;
   saldo: { plano: string; restantes: number; limite: number; renova_em: string | null } | null;
 }
-
-const MODELOS = [
-  { id: "eleven_multilingual_v2", nome: "Mais natural (1 crédito por letra)" },
-  { id: "eleven_flash_v2_5", nome: "Econômico (½ crédito por letra)" },
-];
-
-let cacheVozes: Voz[] | null = null;
 
 export default function LivroTela({ livroId }: { livroId: string }) {
   const [livro, setLivro] = useState<Livro | null>(null);
   const [caps, setCaps] = useState<CapituloResumo[]>([]);
   const [prontos, setProntos] = useState<Map<string, Set<number>>>(new Map());
-  const [vozes, setVozes] = useState<Voz[] | null>(cacheVozes);
+  const [vozes, setVozes] = useState<Voz[] | null>(null);
   const [erroVozes, setErroVozes] = useState("");
+  const [disponiveis, setDisponiveis] = useState<Record<string, boolean>>({ piper: true });
+  const [amostra, setAmostra] = useState<{ url?: string; msg?: string }>({});
   const [estimando, setEstimando] = useState<CapituloResumo | null>(null);
   const [est, setEst] = useState<Estimativa | null>(null);
   const [erro, setErro] = useState("");
@@ -60,17 +58,20 @@ export default function LivroTela({ livroId }: { livroId: string }) {
 
   useEffect(() => {
     carregar();
-    if (!cacheVozes) {
-      chamarFuncao<{ vozes: Voz[] }>("gerar-voz", { acao: "vozes" })
-        .then((r) => {
-          cacheVozes = r.vozes.sort((a, b) => Number(b.idioma === "pt") - Number(a.idioma === "pt"));
-          setVozes(cacheVozes);
-        })
-        .catch((e) => setErroVozes(e.message));
-    }
+    motoresDisponiveis().then(setDisponiveis);
     return assinarGeracao(() => forcar((n) => n + 1));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [livroId]);
+
+  // Vozes do serviço escolhido.
+  useEffect(() => {
+    if (!livro) return;
+    setVozes(null);
+    setErroVozes("");
+    setAmostra({});
+    vozesDoMotor(opcao(livro.modelo).motor).then(setVozes).catch((e) => setErroVozes(e.message));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [livro?.modelo]);
 
   useEffect(() => {
     if (livro) carregarAudios(livro);
@@ -107,12 +108,38 @@ export default function LivroTela({ livroId }: { livroId: string }) {
     atualizar({ voz_id: id || null, voz_nome: v?.nome ?? null });
   }
 
+  function mudarMotor(modelo: string) {
+    atualizar({ modelo, voz_id: null, voz_nome: null });
+  }
+
+  async function ouvirAmostra() {
+    if (!livro?.voz_id) return;
+    setAmostra({ msg: "Gerando amostra…" });
+    try {
+      let texto = "";
+      if (caps[0]) {
+        const { data } = await supabase.from("vb_capitulos").select("texto").eq("id", caps[0].id).single();
+        texto = (data?.texto ?? "").slice(0, 300);
+      }
+      const url = await gerarAmostra(livro.modelo, livro.voz_id, texto || "Olá! Esta é uma amostra da voz.", (m) => setAmostra({ msg: m }));
+      setAmostra({ url });
+    } catch (e) {
+      setAmostra({ msg: e instanceof Error ? e.message : String(e) });
+    }
+  }
+
   async function abrirEstimativa(c: CapituloResumo) {
     if (!livro?.voz_id) return setErro("Escolha uma voz primeiro.");
     setErro("");
     setEstimando(c);
     setEst(null);
     try {
+      if (opcao(livro.modelo).local) {
+        const { blocos, prontos } = await planoLocal(c.id, livro.voz_id, livro.modelo);
+        const aGerar = blocos.reduce((s, b, i) => s + (prontos.has(i) ? 0 : b.length), 0);
+        setEst({ blocos_total: blocos.length, blocos_prontos: prontos.size, caracteres_a_gerar: aGerar, creditos_estimados: 0, unidade: "", modelo: "Piper (grátis)", local: true, saldo: null });
+        return;
+      }
       setEst(await chamarFuncao<Estimativa>("gerar-voz", { acao: "estimar", capitulo_id: c.id, voz_id: livro.voz_id, modelo: livro.modelo }));
     } catch (e) {
       setEstimando(null);
@@ -175,10 +202,15 @@ export default function LivroTela({ livroId }: { livroId: string }) {
       {livro.estado === "erro" && <p className="erro">Deu erro ao preparar: {livro.erro}</p>}
 
       <div className="acoes">
-        <button className="botao" disabled={!algumAudio} onClick={() => ir(`ouvir/${livro.id}`)}>▶ Ouvir (voz ElevenLabs)</button>
-        <button className="botao secundario" disabled={!caps.length} onClick={() => ir(`ouvir/${livro.id}?modo=celular`)}>🔊 Voz do celular (grátis)</button>
+        <button className="botao" disabled={!algumAudio} onClick={() => ir(`ouvir/${livro.id}`)}>▶ Ouvir</button>
+        <button className="botao secundario" disabled={!caps.length} onClick={() => ir(`ouvir/${livro.id}?modo=celular`)}>🗣 Leitura ao vivo</button>
       </div>
-      {!algumAudio && caps.length > 0 && <p className="fraco pequeno margem">Para ouvir com a voz do ElevenLabs, gere o áudio de um capítulo abaixo.</p>}
+      {caps.length > 0 && (
+        <p className="fraco pequeno margem">
+          {!algumAudio && "Para ouvir com a tela apagada, gere o áudio de um capítulo abaixo (a voz Piper é grátis). "}
+          “Leitura ao vivo” usa a voz do celular na hora, mas pode parar quando a tela apaga.
+        </p>
+      )}
 
       <section className="cartao">
         <div className="linha">
@@ -200,27 +232,46 @@ export default function LivroTela({ livroId }: { livroId: string }) {
       </section>
 
       <section className="cartao">
-        <h3>Voz</h3>
+        <div className="linha">
+          <h3>Voz</h3>
+          <button className="link" onClick={() => ir(`vozes?livro=${livro.id}`)}>Comparar todas as vozes</button>
+        </div>
+        <select value={livro.modelo} onChange={(e) => mudarMotor(e.target.value)} aria-label="Serviço de voz">
+          {MOTORES.map((m) => (
+            <option key={m.modelo} value={m.modelo} disabled={!disponiveis[m.motor]}>
+              {m.nome} — {m.resumo}{!disponiveis[m.motor] ? " (falta configurar)" : ""}
+            </option>
+          ))}
+        </select>
         {erroVozes && <p className="erro pequeno">{erroVozes}</p>}
         {!vozes && !erroVozes && <p className="fraco pequeno">Carregando as vozes…</p>}
         {vozes && (
+          <select value={livro.voz_id ?? ""} onChange={(e) => escolherVoz(e.target.value)} aria-label="Voz">
+            <option value="">Escolha uma voz</option>
+            {vozes.map((v) => (
+              <option key={v.voz_id} value={v.voz_id}>
+                {v.nome}{v.idioma === "pt" && opcao(livro.modelo).motor === "elevenlabs" ? " 🇧🇷" : ""}
+                {v.genero ? ` · ${v.genero === "male" ? "masculina" : v.genero === "female" ? "feminina" : v.genero}` : ""}
+                {v.categoria && opcao(livro.modelo).motor !== "elevenlabs" ? ` · ${v.categoria}` : ""}
+              </option>
+            ))}
+          </select>
+        )}
+        {vozAtual?.amostra_url && (
           <>
-            <select value={livro.voz_id ?? ""} onChange={(e) => escolherVoz(e.target.value)} aria-label="Voz">
-              <option value="">Escolha uma voz</option>
-              {vozes.map((v) => (
-                <option key={v.voz_id} value={v.voz_id}>
-                  {v.nome}{v.idioma === "pt" ? " 🇧🇷" : ""}{v.genero ? ` · ${v.genero === "male" ? "masculina" : v.genero === "female" ? "feminina" : v.genero}` : ""}
-                </option>
-              ))}
-            </select>
-            {vozAtual?.amostra_url && (
-              <audio className="amostra" controls preload="none" src={vozAtual.amostra_url}>Amostra</audio>
-            )}
-            <select value={livro.modelo} onChange={(e) => atualizar({ modelo: e.target.value })} aria-label="Qualidade">
-              {MODELOS.map((m) => <option key={m.id} value={m.id}>{m.nome}</option>)}
-            </select>
-            <p className="fraco pequeno">Dica: gere primeiro só o capítulo 1 para testar se a voz soa bem em português.</p>
+            <span className="fraco pequeno">Amostra pronta do serviço (grátis):</span>
+            <audio className="amostra" controls preload="none" src={vozAtual.amostra_url} />
           </>
+        )}
+        {livro.voz_id && (
+          <button className="botao secundario" onClick={ouvirAmostra} disabled={amostra.msg === "Gerando amostra…"}>
+            🔈 Ouvir amostra com o texto do livro{opcao(livro.modelo).motor === "elevenlabs" ? " (gasta ~300 créditos)" : ""}
+          </button>
+        )}
+        {amostra.msg && <p className="fraco pequeno">{amostra.msg}</p>}
+        {amostra.url && <audio className="amostra" controls autoPlay src={amostra.url} />}
+        {opcao(livro.modelo).local && (
+          <p className="fraco pequeno">A voz grátis é gerada no seu celular: na 1ª vez baixa a voz (use Wi-Fi) e, enquanto gera, deixe o app aberto.</p>
         )}
       </section>
 
@@ -240,7 +291,7 @@ export default function LivroTela({ livroId }: { livroId: string }) {
                   <span className="fraco pequeno">
                     ~{fmtTempo(duracaoEstimada(c.caracteres))} · {fmtNum(c.caracteres)} letras ·{" "}
                     {g?.gerando ? (
-                      <span className="aviso">gerando {g.feitos} de {g.total}…</span>
+                      <span className="aviso">{g.mensagem || `gerando ${g.feitos} de ${g.total}…`}</span>
                     ) : completo ? (
                       <span className="ok">áudio pronto</span>
                     ) : feitos ? (
@@ -284,24 +335,33 @@ export default function LivroTela({ livroId }: { livroId: string }) {
             ) : (
               <>
                 <p>Voz: <strong>{livro.voz_nome}</strong> · {est.modelo}</p>
-                <p className="grande">≈ {fmtNum(est.creditos_estimados)} créditos</p>
-                <p className="fraco pequeno">
-                  {fmtNum(est.caracteres_a_gerar)} letras para gerar.
-                  {est.blocos_prontos > 0 && ` ${est.blocos_prontos} de ${est.blocos_total} partes já existem e não gastam de novo.`}
-                </p>
-                {est.saldo ? (
+                {est.local ? (
+                  <>
+                    <p className="grande">Grátis</p>
+                    <p className="fraco pequeno">
+                      {fmtNum(est.caracteres_a_gerar)} letras. O celular gera cada parte e guarda.
+                      Deixe o app aberto até terminar; depois toca até com a tela apagada.
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className="grande">≈ {fmtNum(est.creditos_estimados)} {est.unidade}</p>
+                    <p className="fraco pequeno">{fmtNum(est.caracteres_a_gerar)} letras para gerar.</p>
+                  </>
+                )}
+                {est.blocos_prontos > 0 && <p className="fraco pequeno">{est.blocos_prontos} de {est.blocos_total} partes já existem e não gastam de novo.</p>}
+                {est.saldo && (
                   <p className="pequeno">
                     Seu saldo: <strong>{fmtNum(est.saldo.restantes)}</strong> de {fmtNum(est.saldo.limite)} (plano {est.saldo.plano})
                     {est.saldo.renova_em && ` · renova em ${new Date(est.saldo.renova_em).toLocaleDateString("pt-BR")}`}
                   </p>
-                ) : (
-                  <p className="fraco pequeno">Não consegui ler seu saldo no ElevenLabs.</p>
                 )}
-                {semCredito && <p className="erro pequeno">Seu saldo não cobre este capítulo. Troque para “Econômico” ou use a voz do celular.</p>}
-                <p className="fraco pequeno">É uma estimativa pela tabela do ElevenLabs. O valor exato fica no painel do ElevenLabs.</p>
+                {!est.local && !est.saldo && <p className="fraco pequeno">A cota grátis do mês aparece no painel do serviço (preciso confirmar o valor no site).</p>}
+                {semCredito && <p className="erro pequeno">Seu saldo não cobre este capítulo. Troque para a voz grátis (Piper) ou outro serviço.</p>}
+                {!est.local && <p className="fraco pequeno">É uma estimativa pela tabela do serviço. O valor exato fica no painel dele.</p>}
                 <div className="acoes">
                   <button className="botao secundario" onClick={() => setEstimando(null)}>Cancelar</button>
-                  <button className="botao" disabled={!!semCredito || est.caracteres_a_gerar === 0} onClick={confirmarGeracao}>Confirmar e gerar</button>
+                  <button className="botao" disabled={!!semCredito || est.caracteres_a_gerar === 0} onClick={confirmarGeracao}>{est.local ? "Gerar no celular" : "Confirmar e gerar"}</button>
                 </div>
               </>
             )}

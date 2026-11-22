@@ -7,6 +7,7 @@ import EnviarPdf from "./telas/EnviarPdf";
 import Descobrir from "./telas/Descobrir";
 import LivroTela from "./telas/Livro";
 import Player from "./telas/Player";
+import Vozes from "./telas/Vozes";
 
 function lerRota() {
   const h = location.hash.replace(/^#\/?/, "");
@@ -47,6 +48,7 @@ export default function App() {
   const [p0, p1] = rota.partes;
   if (p0 === "enviar") return <EnviarPdf />;
   if (p0 === "descobrir") return <Descobrir />;
+  if (p0 === "vozes") return <Vozes livroId={rota.params.get("livro")} />;
   if (p0 === "livro" && p1) return <LivroTela key={p1} livroId={p1} />;
   if (p0 === "ouvir" && p1) {
     return <Player key={p1 + rota.params.get("modo")} livroId={p1} modo={rota.params.get("modo") === "celular" ? "celular" : "elevenlabs"} capituloId={rota.params.get("cap")} />;

@@ -11,8 +11,16 @@ A especificação completa está em [VIUDEZBOOK-SPEC.md](VIUDEZBOOK-SPEC.md).
 - **Limpeza:** tira número de página, cabeçalho, rodapé e hífen de fim de linha, e divide em capítulos.
 - **Descobrir:** pesquisa livros em domínio público no Projeto Gutenberg e adiciona com um toque. Cada livro guarda a fonte, o link, a licença e a data da coleta.
 - **Biblioteca:** abas Todos, Ouvindo, Quero ler, Li e ★ Favoritos. Busca por título, autor e palavra dentro do texto. Nota de 1 a 5 ao marcar "Li". Exportar em arquivo.
-- **Voz ElevenLabs:** gerada por capítulo. A estimativa de custo e o seu saldo aparecem **antes**, e só gera depois de **Confirmar e gerar**. O que já foi gerado nunca é gerado de novo.
-- **Voz do celular:** grátis, menos natural, sem gastar crédito.
+- **Todas as vozes num lugar só**, escolhidas por livro:
+  | Voz | Custo | Onde gera |
+  |---|---|---|
+  | **Piper** | Grátis e ilimitada | No celular (na 1ª vez baixa a voz; use Wi-Fi) |
+  | **Google** | Cota grátis por mês (confirmar no site) | No servidor |
+  | **Microsoft (Azure)** | Cota grátis por mês (confirmar no site) | No servidor |
+  | **ElevenLabs** | Créditos do seu plano | No servidor |
+- **Comparar vozes:** ouça cada voz lendo um trecho do seu livro e toque em **Usar**.
+- **Custo antes:** nos serviços pagos, a estimativa e o saldo aparecem antes, e só gera depois de **Confirmar e gerar**. O que já foi gerado nunca é gerado de novo, em nenhuma voz.
+- **Leitura ao vivo:** voz do próprio celular, na hora, sem gerar arquivo. Pode parar quando a tela apaga.
 - **Player:** velocidade de 0,5x a 3x sem mudar o tom, ±15 e 30 segundos, capítulo anterior e próximo, botões do fone e da tela bloqueada. Retoma no mesmo segundo, em qualquer aparelho.
 
 ## Peças
@@ -60,6 +68,21 @@ As tabelas começam com `vb_` para não misturar com os outros apps do projeto `
    - Value: a chave copiada
    - Clique em **Save**.
 
+### 3b. Google e Microsoft (opcionais, para comparar)
+Sem eles o app funciona com o Piper e o ElevenLabs. Eles aparecem como "falta configurar" até você cadastrar.
+
+**Google**
+1. Entre em **console.cloud.google.com**, crie um projeto (ex.: `viudezbook`) e, se pedir, cadastre o cartão. O Google exige o cartão mesmo dentro da cota grátis: confira os limites e coloque um **alerta de orçamento** em **Faturamento** → **Orçamentos e alertas**.
+2. No menu: **APIs e serviços** → **Biblioteca** → procure **Cloud Text-to-Speech API** → **Ativar**.
+3. **APIs e serviços** → **Credenciais** → **Criar credenciais** → **Chave de API**. Depois clique em **Restringir chave** e escolha só a **Cloud Text-to-Speech API**.
+4. No Supabase, em **Edge Functions** → **Secrets** → **Add new secret**: `GOOGLE_TTS_API_KEY` = a chave.
+
+**Microsoft (Azure)**
+1. Entre em **portal.azure.com** → **Criar um recurso** → procure **Speech** (Fala) → **Criar**.
+2. Em **Tipo de preço**, escolha **Free F0**. Em **Região**, escolha **Brazil South**.
+3. Depois de criado, abra **Chaves e Ponto de Extremidade** e copie a **Chave 1**.
+4. No Supabase, em **Secrets**, crie `AZURE_SPEECH_KEY` = a chave e `AZURE_SPEECH_REGION` = `brazilsouth`.
+
 ### 4. Publicar as funções de servidor (automático pelo GitHub)
 1. No Supabase, clique na sua foto → **Account preferences** → **Access Tokens** → **Generate new token**. Dê o nome `github-meus-apps` e copie o token.
 2. No Supabase, abra **Project Settings** → **General** e copie o **Project ID**.
@@ -83,10 +106,17 @@ As tabelas começam com `vb_` para não misturar com os outros apps do projeto `
 2. Toque nos **três pontinhos (⋮)** → **Instalar app** (ou **Adicionar à tela inicial**).
 3. Entre com o seu e-mail e toque no link que chegar.
 
+### 7. Para tocar com a tela apagada (estilo Spotify)
+O áudio gerado (Piper, Google, Microsoft ou ElevenLabs) toca com a tela apagada e aparece na notificação com os botões. Para o Android não cortar o som:
+1. **Configurações** → **Apps** → **Chrome** → **Bateria** → **Sem restrições**. Se o app aparecer na lista como **Viudezbook**, faça o mesmo nele.
+2. A **Leitura ao vivo** (voz do celular na hora) não tem essa garantia: use áudio gerado quando for apagar a tela.
+
 ---
 
 ## Custos (conferir sempre no site de cada serviço)
 
+- **Piper:** grátis e sem limite. Gasta só bateria e espaço: cerca de 30 MB por hora de áudio no Supabase.
+- **Google e Microsoft:** cota grátis por mês. Os valores mudam, então **preciso confirmar no site** de cada um.
 - **ElevenLabs grátis:** a sua conta tem 10.000 créditos por mês, um capítulo médio. No modo "Mais natural", 1 letra gasta 1 crédito. No "Econômico", ½ crédito. O app mostra a estimativa antes de gerar. O plano grátis pode ter regras próprias, como uso de vozes da biblioteca e atribuição: **preciso confirmar no site**.
 - **Supabase grátis:** tem limite de espaço e pode pausar o projeto se ficar uma semana sem uso. Áudio ocupa espaço, então gere por capítulo.
 - **Vercel grátis:** suficiente para uso pessoal.

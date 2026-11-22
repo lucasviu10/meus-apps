@@ -82,7 +82,20 @@ input[type="email"], input[type="search"], input:not([type]), input[type="text"]
   border: 1px solid var(--borda);
   background: var(--fundo);
 }
-input:focus, select:focus { outline: 2px solid var(--cor); outline-offset: 1px; }
+textarea {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--borda);
+  background: var(--fundo);
+  font: inherit;
+  color: inherit;
+  resize: vertical;
+}
+.grupo-voz { gap: 8px; }
+.linha-voz { display: flex; flex-direction: column; gap: 6px; padding: 8px 0; border-top: 1px solid var(--borda); }
+.linha-voz .info { flex: 1; }
+input:focus, select:focus, textarea:focus { outline: 2px solid var(--cor); outline-offset: 1px; }
 label { font-size: 0.9rem; color: var(--fraco); }
 
 .botao {
