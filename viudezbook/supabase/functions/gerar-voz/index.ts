@@ -198,7 +198,7 @@ Deno.serve(async (req) => {
   if (cli instanceof Response) return cli;
   const { db, usuarioId } = cli;
 
-  let c: { acao?: string; motor?: Motor; capitulo_id?: string; voz_id?: string; modelo?: string; bloco?: number; confirmado?: boolean; texto?: string };
+  let c: { acao?: string; caminhos?: string[]; autorizo?: boolean; motor?: Motor; capitulo_id?: string; voz_id?: string; modelo?: string; bloco?: number; confirmado?: boolean; texto?: string };
   try {
     c = await req.json();
   } catch {
@@ -218,6 +218,35 @@ Deno.serve(async (req) => {
       if (!CHAVES[motor]) return erro("Serviço de voz desconhecido.");
       if (!chave(motor)) return erro(`Falta cadastrar a chave ${CHAVES[motor]} no Supabase.`);
       return resposta({ vozes: await listarVozes(motor), saldo: motor === "elevenlabs" ? await saldoEleven() : null });
+    }
+
+    if (c.acao === "clonar") {
+      // Cria a SUA voz no ElevenLabs a partir das suas gravações (só a sua, com autorização).
+      if (c.autorizo !== true) return erro("Confirme que a voz é sua.");
+      if (!chave("elevenlabs")) return erro("Falta cadastrar a chave ELEVENLABS_API_KEY no Supabase.");
+      const caminhos = (c.caminhos ?? []).slice(0, 3);
+      if (!caminhos.length) return erro("Grave e guarde a sua voz primeiro.");
+      if (caminhos.some((x) => !x.startsWith(`${usuarioId}/minha-voz/`))) return erro("Gravação inválida.", 403);
+      const form = new FormData();
+      form.append("name", "Minha voz");
+      form.append("description", "Voz do dono da conta, gravada no Viudezbook.");
+      form.append("remove_background_noise", "true");
+      form.append("labels", JSON.stringify({ language: "pt", accent: "pt-brazilian" }));
+      for (const x of caminhos) {
+        const { data, error } = await db.storage.from("vb-audios").download(x);
+        if (error || !data) return erro("Não achei a gravação " + x.split("/").pop());
+        form.append("files", new File([await data.arrayBuffer()], x.split("/").pop()!, { type: "audio/mpeg" }));
+      }
+      const r = await fetch(`${ELEVEN}/voices/add`, { method: "POST", headers: { "xi-api-key": chave("elevenlabs")! }, body: form });
+      if (!r.ok) {
+        const e = await falha("ElevenLabs", r);
+        if (/instant_voice_cloning|can_not_use|subscription|upgrade|plan/i.test(e.message)) {
+          return erro("Seu plano do ElevenLabs não permite criar voz. Precisa do plano Starter ou acima (confira o preço no site). Sua gravação continua guardada.");
+        }
+        throw e;
+      }
+      const j = await r.json();
+      return resposta({ voz_id: j.voice_id, nome: "Minha voz" });
     }
 
     const modelo = c.modelo ?? "eleven_multilingual_v2";

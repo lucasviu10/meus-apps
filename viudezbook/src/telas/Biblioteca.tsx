@@ -92,6 +92,7 @@ export default function Biblioteca({ email }: { email: string }) {
         <div className="cartao menu">
           <p className="fraco pequeno">Conectado como {email}</p>
           <button className="botao secundario" onClick={() => ir("vozes")}>Comparar vozes</button>
+          <button className="botao secundario" onClick={() => ir("minha-voz")}>Gravar minha voz</button>
           <button className="botao secundario" onClick={exportar}>Exportar biblioteca</button>
           <button className="botao secundario" onClick={() => supabase.auth.signOut()}>Sair</button>
         </div>

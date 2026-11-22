@@ -8,6 +8,7 @@ import Descobrir from "./telas/Descobrir";
 import LivroTela from "./telas/Livro";
 import Player from "./telas/Player";
 import Vozes from "./telas/Vozes";
+import MinhaVoz from "./telas/MinhaVoz";
 
 function lerRota() {
   const h = location.hash.replace(/^#\/?/, "");
@@ -48,6 +49,7 @@ export default function App() {
   const [p0, p1] = rota.partes;
   if (p0 === "enviar") return <EnviarPdf />;
   if (p0 === "descobrir") return <Descobrir />;
+  if (p0 === "minha-voz") return <MinhaVoz />;
   if (p0 === "vozes") return <Vozes livroId={rota.params.get("livro")} />;
   if (p0 === "livro" && p1) return <LivroTela key={p1} livroId={p1} />;
   if (p0 === "ouvir" && p1) {

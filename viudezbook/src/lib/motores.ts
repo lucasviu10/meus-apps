@@ -42,6 +42,11 @@ export function motoresDisponiveis(): Promise<Record<string, boolean>> {
 
 const cacheVozes = new Map<Motor, Promise<Voz[]>>();
 
+/** Esquece as listas de vozes (ex.: depois de criar a sua voz). */
+export function limparCacheVozes() {
+  cacheVozes.clear();
+}
+
 export function vozesDoMotor(motor: Motor): Promise<Voz[]> {
   if (motor === "piper") {
     return Promise.resolve(VOZES_PIPER.map((v) => ({ ...v, categoria: "grátis", idioma: "pt", sotaque: null, genero: "male", amostra_url: null })));

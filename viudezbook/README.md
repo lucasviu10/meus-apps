@@ -19,6 +19,7 @@ A especificação completa está em [VIUDEZBOOK-SPEC.md](VIUDEZBOOK-SPEC.md).
   | **Microsoft (Azure)** | Cota grátis por mês (confirmar no site) | No servidor |
   | **ElevenLabs** | Créditos do seu plano | No servidor |
 - **Comparar vozes:** ouça cada voz lendo um trecho do seu livro e toque em **Usar**.
+- **Minha voz:** grave você lendo um texto pronto (1 a 2 minutos). O app confere volume e duração, guarda a gravação na sua conta e cria a sua voz no ElevenLabs com um toque. Criar voz exige o plano Starter do ElevenLabs ou acima (pago; confira o preço no site). Só a sua voz, nunca a de outra pessoa.
 - **Custo antes:** nos serviços pagos, a estimativa e o saldo aparecem antes, e só gera depois de **Confirmar e gerar**. O que já foi gerado nunca é gerado de novo, em nenhuma voz.
 - **Leitura ao vivo:** voz do próprio celular, na hora, sem gerar arquivo. Pode parar quando a tela apaga.
 - **Player:** velocidade de 0,5x a 3x sem mudar o tom, ±15 e 30 segundos, capítulo anterior e próximo, botões do fone e da tela bloqueada. Retoma no mesmo segundo, em qualquer aparelho.
@@ -105,6 +106,13 @@ Sem eles o app funciona com o Piper e o ElevenLabs. Eles aparecem como "falta co
 1. Abra o endereço do app no **Chrome** do celular.
 2. Toque nos **três pontinhos (⋮)** → **Instalar app** (ou **Adicionar à tela inicial**).
 3. Entre com o seu e-mail e toque no link que chegar.
+
+### 6b. Gravar a sua voz
+1. No app, toque em **☰** → **Gravar minha voz**.
+2. Marque **“Esta é a minha própria voz”** e toque em **● Começar a gravar**. Na 1ª vez, o Chrome pergunta: toque em **Permitir** no microfone.
+3. Leia o texto inteiro no seu tom normal e toque em **■ Parar**. Ouça; se aparecer aviso, grave de novo.
+4. Toque em **Guardar gravação** e depois em **Criar minha voz no ElevenLabs**.
+5. A voz aparece como **“Minha voz”** em **Comparar vozes** → ElevenLabs. Toque em **Usar**.
 
 ### 7. Para tocar com a tela apagada (estilo Spotify)
 O áudio gerado (Piper, Google, Microsoft ou ElevenLabs) toca com a tela apagada e aparece na notificação com os botões. Para o Android não cortar o som:

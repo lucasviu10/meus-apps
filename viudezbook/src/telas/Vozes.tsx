@@ -65,6 +65,7 @@ export default function Vozes({ livroId }: { livroId: string | null }) {
         <label htmlFor="amostra">Texto da amostra{titulo ? ` (de “${titulo}”)` : ""}</label>
         <textarea id="amostra" rows={4} value={texto} maxLength={400} onChange={(e) => setTexto(e.target.value)} />
         <p className="fraco pequeno">Toque em ▶ para ouvir cada voz lendo este texto. Use fone para comparar melhor.</p>
+        <button className="link" onClick={() => ir("minha-voz")}>🎙 Quero ler com a minha própria voz</button>
       </section>
 
       {disponiveis === null && <p className="fraco">Carregando…</p>}
@@ -91,7 +92,7 @@ export default function Vozes({ livroId }: { livroId: string | null }) {
                     <span className="info">
                       <strong>{v.nome}</strong>
                       <span className="fraco pequeno">
-                        {[v.genero === "male" ? "masculina" : v.genero === "female" ? "feminina" : null, v.categoria, v.idioma === "pt" && g.motor === "elevenlabs" ? "🇧🇷" : null]
+                        {[v.genero === "male" ? "masculina" : v.genero === "female" ? "feminina" : null, v.categoria === "cloned" ? "sua voz" : v.categoria, v.idioma === "pt" && g.motor === "elevenlabs" ? "🇧🇷" : null]
                           .filter(Boolean)
                           .join(" · ")}
                       </span>
