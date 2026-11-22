@@ -19,6 +19,7 @@ A especificação completa está em [VIUDEZBOOK-SPEC.md](VIUDEZBOOK-SPEC.md).
   | **Microsoft (Azure)** | Cota grátis por mês (confirmar no site) | No servidor |
   | **ElevenLabs** | Créditos do seu plano | No servidor |
 - **Comparar vozes:** ouça cada voz lendo um trecho do seu livro e toque em **Usar**.
+- **Resumo em ~12 minutos:** o app escreve um resumo do livro para ouvir (cerca de 1.800 palavras). Ele vira o “★ Resumo” no topo dos capítulos: dá para ler, gerar a voz e ouvir. Quem escreve: **Gemini** (Google, cota grátis) ou **Claude** (Anthropic, pago por uso). O custo aparece antes de gerar. Uso pessoal.
 - **Minha voz:** grave você lendo um texto pronto (1 a 2 minutos). O app confere volume e duração, guarda a gravação na sua conta e cria a sua voz no ElevenLabs com um toque. Criar voz exige o plano Starter do ElevenLabs ou acima (pago; confira o preço no site). Só a sua voz, nunca a de outra pessoa.
 - **Custo antes:** nos serviços pagos, a estimativa e o saldo aparecem antes, e só gera depois de **Confirmar e gerar**. O que já foi gerado nunca é gerado de novo, em nenhuma voz.
 - **Leitura ao vivo:** voz do próprio celular, na hora, sem gerar arquivo. Pode parar quando a tela apaga.
@@ -83,6 +84,19 @@ Sem eles o app funciona com o Piper e o ElevenLabs. Eles aparecem como "falta co
 2. Em **Tipo de preço**, escolha **Free F0**. Em **Região**, escolha **Brazil South**.
 3. Depois de criado, abra **Chaves e Ponto de Extremidade** e copie a **Chave 1**.
 4. No Supabase, em **Secrets**, crie `AZURE_SPEECH_KEY` = a chave e `AZURE_SPEECH_REGION` = `brazilsouth`.
+
+### 3c. Resumo (opcional): Gemini e/ou Claude
+**Gemini (grátis, com cota)**
+1. Abra **aistudio.google.com/apikey** e entre com a sua conta Google.
+2. Toque em **Create API key** (Criar chave de API) e copie.
+3. No Supabase, em **Edge Functions** → **Secrets**, crie `GEMINI_API_KEY` = a chave.
+Atenção: no plano grátis, o Google pode usar o conteúdo enviado para melhorar os produtos dele (preciso confirmar a regra atual no site). Para livros de domínio público isso não pesa; para PDFs comprados, prefira o Claude.
+
+**Claude (pago, centavos por livro)**
+1. Abra **console.anthropic.com** → **API Keys** → **Create Key** e copie.
+2. Em **Billing**, coloque um pouco de crédito (ex.: US$ 5) e, se quiser, um limite de gasto.
+3. No Supabase, em **Secrets**, crie `ANTHROPIC_API_KEY` = a chave.
+O app mostra quanto vai custar antes de gerar (pela tabela da Anthropic; o valor exato fica no painel dela).
 
 ### 4. Publicar as funções de servidor (automático pelo GitHub)
 1. No Supabase, clique na sua foto → **Account preferences** → **Access Tokens** → **Generate new token**. Dê o nome `github-meus-apps` e copie o token.

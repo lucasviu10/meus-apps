@@ -9,3 +9,6 @@ verify_jwt = true
 
 [functions.gerar-voz]
 verify_jwt = true
+
+[functions.resumir]
+verify_jwt = true
