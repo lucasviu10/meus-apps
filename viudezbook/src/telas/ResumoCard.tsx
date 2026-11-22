@@ -2,15 +2,14 @@ import { useEffect, useState } from "react";
 import { chamarFuncao, supabase } from "../lib/supabase";
 import { fmtNum } from "../lib/tipos";
 
-type Provedor = "gemini" | "claude";
+type Provedor = "gemini";
 interface Estado { estado: "gerando" | "pronto" | "erro"; provedor: Provedor; palavras: number | null; erro: string | null; capitulo_id: string | null }
 interface Estimativa { letras: number; custo_usd: number; gratis: boolean }
 
-const NOMES: Record<Provedor, string> = { gemini: "Gemini (Google) — grátis com cota", claude: "Claude (Anthropic) — pago por uso, mais caprichado" };
 
 export default function ResumoCard({ livroId, aoFicarPronto }: { livroId: string; aoFicarPronto: () => void }) {
   const [disp, setDisp] = useState<Record<Provedor, boolean> | null>(null);
-  const [provedor, setProvedor] = useState<Provedor>("gemini");
+  const provedor: Provedor = "gemini";
   const [estado, setEstado] = useState<Estado | null>(null);
   const [est, setEst] = useState<Estimativa | null>(null);
   const [texto, setTexto] = useState<string | null>(null);
@@ -24,12 +23,9 @@ export default function ResumoCard({ livroId, aoFicarPronto }: { livroId: string
 
   useEffect(() => {
     lerEstado();
-    chamarFuncao<{ gemini: boolean; claude: boolean }>("resumir", { acao: "provedores" })
-      .then((r) => {
-        setDisp(r);
-        if (!r.gemini && r.claude) setProvedor("claude");
-      })
-      .catch(() => setDisp({ gemini: false, claude: false }));
+    chamarFuncao<{ gemini: boolean }>("resumir", { acao: "provedores" })
+      .then((r) => setDisp({ gemini: r.gemini }))
+      .catch(() => setDisp({ gemini: false }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [livroId]);
 
@@ -73,7 +69,7 @@ export default function ResumoCard({ livroId, aoFicarPronto }: { livroId: string
     setTexto(data?.texto ?? "");
   }
 
-  const nenhum = disp && !disp.gemini && !disp.claude;
+  const nenhum = disp && !disp.gemini;
   const minutos = estado?.palavras ? Math.max(1, Math.round(estado.palavras / 150)) : null;
 
   return (
@@ -94,22 +90,18 @@ export default function ResumoCard({ livroId, aoFicarPronto }: { livroId: string
       {estado?.estado === "gerando" && <p className="aviso pequeno">Escrevendo o resumo… leva de 1 a 3 minutos. Pode sair desta tela.</p>}
       {estado?.estado === "erro" && <p className="erro pequeno">Não deu certo: {estado.erro}</p>}
 
-      {nenhum && <p className="aviso pequeno">Falta cadastrar a chave do Gemini ou do Claude no Supabase (passo a passo no README).</p>}
+      {nenhum && <p className="aviso pequeno">Falta cadastrar a chave grátis do Gemini no Supabase (passo a passo no README).</p>}
 
       {disp && !nenhum && estado?.estado !== "gerando" && (
         <>
-          <select value={provedor} onChange={(e) => { setProvedor(e.target.value as Provedor); setEst(null); }} aria-label="Quem escreve o resumo">
-            {(Object.keys(NOMES) as Provedor[]).map((p) => (
-              <option key={p} value={p} disabled={!disp[p]}>{NOMES[p]}{!disp[p] ? " (falta configurar)" : ""}</option>
-            ))}
-          </select>
+          <p className="fraco pequeno">Quem escreve: Gemini (Google), grátis dentro da cota diária.</p>
           {!est ? (
             <button className="botao" onClick={estimar}>{estado?.estado === "pronto" ? "Refazer o resumo" : "Fazer resumo"}</button>
           ) : (
             <div className="confirmar-resumo">
-              <p className="grande">{est.gratis ? "Grátis" : `≈ US$ ${est.custo_usd.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`}</p>
+              <p className="grande">Grátis</p>
               <p className="fraco pequeno">
-                {fmtNum(est.letras)} letras do livro. {est.gratis ? "Usa a cota grátis do Google (pode acabar no dia)." : "Estimativa pela tabela da Anthropic; o valor exato fica no painel dela."}
+                {fmtNum(est.letras)} letras do livro. Usa a cota grátis do Google (pode acabar no dia; aí é só tentar mais tarde).
               </p>
               <div className="acoes">
                 <button className="botao secundario" onClick={() => setEst(null)}>Cancelar</button>
