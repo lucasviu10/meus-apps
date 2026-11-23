@@ -240,3 +240,16 @@ label { font-size: 0.9rem; color: var(--fraco); }
 .texto-resumo { max-height: 50vh; overflow-y: auto; padding: 4px 2px; }
 .texto-resumo p { margin: 0 0 10px; line-height: 1.55; }
 .confirmar-resumo { display: flex; flex-direction: column; gap: 6px; }
+
+.faixa-tarefas {
+  position: sticky; top: 0; z-index: 20;
+  background: var(--cartao); border-bottom: 1px solid var(--borda);
+  padding: 8px 16px; display: flex; flex-direction: column; gap: 6px;
+  max-width: 640px; margin: 0 auto;
+}
+.faixa-tarefas .tarefa { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-size: 0.9rem; }
+.faixa-tarefas .tarefa .link { flex: 1; padding: 2px 0; color: var(--texto); }
+.faixa-tarefas .tarefa .barra { width: 100%; height: 6px; }
+.faixa-tarefas .tarefa.erro .link { color: var(--erro); }
+.faixa-tarefas .tarefa.pronto .link { color: var(--ok); }
+.faixa-tarefas .icone.pequeno { min-width: 36px; min-height: 36px; font-size: 1rem; }

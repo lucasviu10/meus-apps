@@ -6,6 +6,7 @@ import { MOTORES, gerarAmostra, motoresDisponiveis, opcao, vozesDoMotor } from "
 import { ir } from "../App";
 import Capa from "./Capa";
 import ResumoCard from "./ResumoCard";
+import { assinarEnvios, envioDoLivro, retomarEnvio } from "../lib/envios";
 
 interface Estimativa {
   blocos_total: number;
@@ -79,12 +80,24 @@ export default function LivroTela({ livroId }: { livroId: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [livro?.voz_id, livro?.modelo, livro?.id]);
 
+  // Quando o envio (tarefa de fundo) deste livro avança ou termina, recarrega.
+  useEffect(
+    () =>
+      assinarEnvios(() => {
+        const e = envioDoLivro(livroId);
+        if (e?.etapa === "pronto" || e?.etapa === "erro") carregar();
+        else forcar((n) => n + 1);
+      }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [livroId],
+  );
+
   // Atualiza a contagem quando a geração avança.
   useEffect(() => assinarGeracao(() => livro && carregarAudios(livro)), [livro]);
 
   // Se o livro ainda está sendo preparado, confere de novo em alguns segundos.
   useEffect(() => {
-    if (livro?.estado !== "processando") return;
+    if (livro?.estado !== "processando" || !envioDoLivro(livro.id)) return;
     const t = setTimeout(carregar, 4000);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -199,8 +212,25 @@ export default function LivroTela({ livroId }: { livroId: string }) {
         </div>
       </section>
 
-      {livro.estado === "processando" && <p className="aviso">Preparando o texto… isso leva alguns segundos.</p>}
-      {livro.estado === "erro" && <p className="erro">Deu erro ao preparar: {livro.erro}</p>}
+      {(() => {
+        const env = envioDoLivro(livro.id);
+        const ativo = env && env.etapa !== "pronto" && env.etapa !== "erro";
+        if (ativo) return <p className="aviso">{env!.mensagem} (pode trocar de tela: continua em segundo plano)</p>;
+        const travado = livro.estado === "erro" || (livro.estado === "processando" && !env);
+        if (!travado) return null;
+        return (
+          <div className="cartao">
+            <p className={livro.estado === "erro" ? "erro" : "aviso"}>
+              {livro.estado === "erro" ? `Não terminou: ${livro.erro ?? "erro desconhecido"}` : "O envio deste livro foi interrompido."}
+            </p>
+            {livro.pdf_caminho ? (
+              <button className="botao" onClick={() => retomarEnvio(livro.id, livro.titulo, livro.pdf_caminho!)}>Tentar de novo</button>
+            ) : (
+              <p className="fraco pequeno">O PDF não chegou a ser guardado. Apague este livro e envie o PDF de novo.</p>
+            )}
+          </div>
+        );
+      })()}
 
       <div className="acoes">
         <button className="botao" disabled={!algumAudio} onClick={() => ir(`ouvir/${livro.id}`)}>▶ Ouvir</button>

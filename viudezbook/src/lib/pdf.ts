@@ -57,11 +57,13 @@ const MIN_CARACTERES = 40; // menos que isso na página = provavelmente imagem
 export async function extrairPaginas(
   arquivo: File,
   aoProgredir: (mensagem: string, fracao: number) => void,
-): Promise<{ paginas: string[]; paginasComOcr: number }> {
+): Promise<{ paginas: string[]; paginasComOcr: number; paginasOcrFalhou: number }> {
   const dados = new Uint8Array(await arquivo.arrayBuffer());
   const doc = await pdfjs.getDocument({ data: dados }).promise;
   const paginas: string[] = [];
   let paginasComOcr = 0;
+  let paginasOcrFalhou = 0;
+  let ocrDisponivel = true;
   try {
     for (let n = 1; n <= doc.numPages; n++) {
       aoProgredir(`Lendo página ${n} de ${doc.numPages}`, (n - 1) / doc.numPages);
@@ -69,19 +71,28 @@ export async function extrairPaginas(
       const conteudo = await pag.getTextContent();
       let texto = montarTextoDaPagina(conteudo.items as ItemTexto[]);
 
-      if (texto.replace(/\s/g, "").length < MIN_CARACTERES) {
+      if (ocrDisponivel && texto.replace(/\s/g, "").length < MIN_CARACTERES) {
         aoProgredir(`Página ${n} de ${doc.numPages} é imagem: lendo com OCR (mais demorado)`, (n - 1) / doc.numPages);
-        const vista = pag.getViewport({ scale: 2 });
-        const canvas = document.createElement("canvas");
-        canvas.width = vista.width;
-        canvas.height = vista.height;
-        await pag.render({ canvasContext: canvas.getContext("2d")!, viewport: vista }).promise;
-        const ocr = await lerImagemComOcr(canvas);
-        if (ocr.replace(/\s/g, "").length > texto.replace(/\s/g, "").length) {
-          texto = ocr;
-          paginasComOcr++;
+        // Se o OCR falhar, pula só esta página: o resto do livro continua.
+        try {
+          const vista = pag.getViewport({ scale: 2 });
+          const canvas = document.createElement("canvas");
+          canvas.width = vista.width;
+          canvas.height = vista.height;
+          await pag.render({ canvasContext: canvas.getContext("2d")!, viewport: vista }).promise;
+          const ocr = await lerImagemComOcr(canvas);
+          if (ocr.replace(/\s/g, "").length > texto.replace(/\s/g, "").length) {
+            texto = ocr;
+            paginasComOcr++;
+          }
+          canvas.width = canvas.height = 0;
+        } catch (e) {
+          console.warn("OCR falhou na página", n, e);
+          paginasOcrFalhou++;
+          // Se o OCR nem consegue começar, não tenta de novo nas próximas páginas.
+          if (paginasComOcr === 0 && paginasOcrFalhou >= 2) ocrDisponivel = false;
+          await encerrarOcr().catch(() => {});
         }
-        canvas.width = canvas.height = 0;
       }
       paginas.push(texto);
       pag.cleanup();
@@ -91,5 +102,5 @@ export async function extrairPaginas(
     await doc.destroy();
   }
   aoProgredir("Leitura concluída", 1);
-  return { paginas, paginasComOcr };
+  return { paginas, paginasComOcr, paginasOcrFalhou };
 }
