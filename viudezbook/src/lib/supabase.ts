@@ -9,8 +9,9 @@ const PADRAO_CHAVE =
 
 const urlEnv = (import.meta.env.VITE_SUPABASE_URL as string | undefined)?.trim();
 const chaveEnv = (import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined)?.replace(/\s+/g, "");
-// Só usa a variável de ambiente se ela apontar para OUTRO projeto (ex.: testes locais).
-const usarEnv = !!(urlEnv && chaveEnv && urlEnv !== PADRAO_URL);
+// As variáveis de ambiente só valem nos testes no computador (modo de desenvolvimento).
+// No app publicado, usa sempre o endereço e a chave acima.
+const usarEnv = !!(import.meta.env.DEV && urlEnv && chaveEnv);
 const url = usarEnv ? urlEnv : PADRAO_URL;
 const chave = usarEnv ? chaveEnv : PADRAO_CHAVE;
 
