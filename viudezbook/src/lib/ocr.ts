@@ -14,6 +14,10 @@ async function obter(): Promise<Worker> {
         gzip: true,
       }),
     );
+    // Se não conseguir começar, esquece a tentativa para poder tentar de novo depois.
+    trabalhador.catch(() => {
+      trabalhador = null;
+    });
   }
   return trabalhador;
 }
@@ -26,7 +30,12 @@ export async function lerImagemComOcr(canvas: HTMLCanvasElement): Promise<string
 
 export async function encerrarOcr() {
   if (!trabalhador) return;
-  const w = await trabalhador;
+  const t = trabalhador;
   trabalhador = null;
-  await w.terminate();
+  try {
+    const w = await t;
+    await w.terminate();
+  } catch {
+    /* o OCR nem tinha começado */
+  }
 }

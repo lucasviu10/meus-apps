@@ -9,6 +9,7 @@ import LivroTela from "./telas/Livro";
 import Player from "./telas/Player";
 import Vozes from "./telas/Vozes";
 import MinhaVoz from "./telas/MinhaVoz";
+import FaixaTarefas from "./telas/FaixaTarefas";
 
 function lerRota() {
   const h = location.hash.replace(/^#\/?/, "");
@@ -46,6 +47,15 @@ export default function App() {
   if (sessao === undefined) return <main className="tela centro"><p className="fraco">Abrindo…</p></main>;
   if (!sessao) return <Login />;
 
+  return (
+    <>
+      <FaixaTarefas />
+      <Tela rota={rota} email={sessao.user.email ?? ""} />
+    </>
+  );
+}
+
+function Tela({ rota, email }: { rota: ReturnType<typeof lerRota>; email: string }) {
   const [p0, p1] = rota.partes;
   if (p0 === "enviar") return <EnviarPdf />;
   if (p0 === "descobrir") return <Descobrir />;
@@ -55,5 +65,5 @@ export default function App() {
   if (p0 === "ouvir" && p1) {
     return <Player key={p1 + rota.params.get("modo")} livroId={p1} modo={rota.params.get("modo") === "celular" ? "celular" : "elevenlabs"} capituloId={rota.params.get("cap")} />;
   }
-  return <Biblioteca email={sessao.user.email ?? ""} />;
+  return <Biblioteca email={email} />;
 }
