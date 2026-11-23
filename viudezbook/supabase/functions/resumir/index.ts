@@ -7,7 +7,7 @@ import { blocosDoCapitulo } from "../_shared/texto.ts";
 
 type Provedor = "gemini";
 
-const MODELO_GEMINI = Deno.env.get("GEMINI_MODEL") ?? "gemini-2.5-flash"; // conferir no site do Google qual modelo é grátis
+const MODELO_GEMINI = Deno.env.get("GEMINI_MODEL") ?? "gemini-flash-latest"; // sempre a versão atual do Flash (o nome que o Google recomenda)
 const GEMINI_URL = Deno.env.get("GEMINI_URL") ?? "https://generativelanguage.googleapis.com/v1beta";
 
 const LIMITE_TOKENS_LIVRO = 800_000; // cabe com folga na janela de 1 milhão
