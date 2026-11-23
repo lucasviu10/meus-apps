@@ -2,6 +2,8 @@ import { useState } from "react";
 import { supabase } from "../lib/supabase";
 import Logo from "./Logo";
 
+declare const __VERSAO__: string;
+
 export default function Login() {
   const [email, setEmail] = useState("");
   const [estado, setEstado] = useState<"livre" | "enviando" | "enviado">("livre");
@@ -45,6 +47,7 @@ export default function Login() {
           <p className="fraco pequeno">Sem senha: você recebe um link no e-mail e entra com um toque.</p>
         </form>
       )}
+      <p className="fraco pequeno">Versão {__VERSAO__}</p>
     </main>
   );
 }
